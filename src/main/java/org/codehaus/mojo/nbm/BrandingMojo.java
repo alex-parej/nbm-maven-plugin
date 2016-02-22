@@ -17,14 +17,17 @@
 package org.codehaus.mojo.nbm;
 
 import java.io.File;
+import java.util.Collections;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.shared.filtering.MavenFileFilter;
 import org.codehaus.plexus.archiver.jar.JarArchiver;
 import org.codehaus.plexus.util.DirectoryScanner;
-import org.codehaus.plexus.util.FileUtils;
 
 /**
  * Package branding resources for NetBeans platform/IDE based application.
@@ -92,7 +95,16 @@ public class BrandingMojo
      */
     @Parameter(required=true, readonly=true, property="project")
     private MavenProject project;
-
+    
+    @Parameter(property="session", readonly=true, required=true)
+    private  MavenSession session;
+    
+    @Parameter(property="encoding", defaultValue="${project.build.sourceEncoding}")
+    protected String encoding;
+    
+    @Component
+    private MavenFileFilter mavenFileFilter;
+    
     public void execute()
         throws MojoExecutionException
     {
@@ -141,7 +153,10 @@ public class BrandingMojo
                 {
                     brandingDestination.getParentFile().mkdirs();
                 }
-                FileUtils.copyFile( brandingFile, brandingDestination );
+                //TODO remove this comment later
+                //FileUtils.copyFile( brandingFile, brandingDestination );
+                //TODO add encoding warning
+                mavenFileFilter.copyFile( brandingFile, brandingDestination, true, project, Collections.EMPTY_LIST, true, encoding, session );
             }
             for (File rootDir : outputDir.listFiles()) {
                 if (!rootDir.isDirectory()) {
