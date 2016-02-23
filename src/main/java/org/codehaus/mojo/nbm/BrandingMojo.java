@@ -19,6 +19,7 @@ package org.codehaus.mojo.nbm;
 import java.io.File;
 import java.util.Collections;
 import org.apache.maven.execution.MavenSession;
+import org.apache.maven.model.PatternSet;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -105,6 +106,9 @@ public class BrandingMojo
     @Component
     private MavenFileFilter mavenFileFilter;
     
+    @Parameter
+    private  PatternSet brandingFiltering;
+    
     public void execute()
         throws MojoExecutionException
     {
@@ -123,6 +127,20 @@ public class BrandingMojo
         }
         try
         {
+            DirectoryScanner filteringScanner = null;
+            if ( brandingFiltering != null )
+            {
+                filteringScanner = new DirectoryScanner();
+                String[] includes = new String[brandingFiltering.getIncludes().size()];
+                brandingFiltering.getIncludes().toArray( includes );
+                String[] excludes = new String[brandingFiltering.getExcludes().size()];
+                brandingFiltering.getExcludes().toArray( excludes );
+                filteringScanner.setIncludes( includes );
+                filteringScanner.setExcludes( excludes );
+                filteringScanner.addDefaultExcludes();
+                filteringScanner.setBasedir( brandingSources );
+                filteringScanner.scan();
+            }
 
             DirectoryScanner scanner = new DirectoryScanner();
             scanner.setIncludes( new String[]
@@ -153,10 +171,21 @@ public class BrandingMojo
                 {
                     brandingDestination.getParentFile().mkdirs();
                 }
-                //TODO remove this comment later
-                //FileUtils.copyFile( brandingFile, brandingDestination );
+               
+                boolean filtering = false;
+                if ( filteringScanner != null )
+                {
+                    for ( String object : filteringScanner.getIncludedFiles() )
+                    {
+                        if ( object.equals( brandingFilePath ) )
+                        {
+                            filtering = true;
+                            break;
+                        }
+                    }
+                }
                 //TODO add encoding warning
-                mavenFileFilter.copyFile( brandingFile, brandingDestination, true, project, Collections.EMPTY_LIST, true, encoding, session );
+                mavenFileFilter.copyFile( brandingFile, brandingDestination, filtering, project, Collections.EMPTY_LIST, true, encoding, session );
             }
             for (File rootDir : outputDir.listFiles()) {
                 if (!rootDir.isDirectory()) {
